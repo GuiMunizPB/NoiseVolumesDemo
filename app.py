@@ -181,21 +181,19 @@ def advanced_page():
             noise_type = st.selectbox(
             "Noise Type", options=["Simplex", "Perlin"], index=0, help="Select between Simplex and Perlin noise. Default = Simplex"
             )
-
+            
             num_volumes = st.slider(
-                "Number of Volumes", min_value=1, max_value=20, value=6, step=1, help="The number of volumes combined to generate the result. Default = 6"
-            )
+                "Number of Volumes", min_value=1, max_value=20, value=6, step=1, help="The number of volumes combined to generate the result. Default = 6")
 
             lacunarity = st.slider(
                 "Lacunarity", min_value=0.01, max_value=5.0, value=1.5, step=0.01, help="The frequency factor between two octaves ('step' from one octave to the other). Default = 1.5"
-            )
-            persistence = st.slider(
-                "Persistence", min_value=0.1, max_value=1.0, value=0.7, step=0.01, help="The scaling factor between two octaves ('weight' of an octave). Default = 0.7"
             )
 
             mask_labels = np.unique(template_mask)
             max_octaves =  len(calculate_frequencies(volume_size, lacunarity))
             octaves_thresholds = {}
+            persistence_dict = {}
+            
 
             gradient_matrix_thresholds = st.checkbox("Set Threshold Gradient Matrix")
             if gradient_matrix_thresholds:
@@ -208,8 +206,14 @@ def advanced_page():
 
                 octaves_threshold = st.slider(
                     "Octaves Thresholds", min_value=1, max_value=max_octaves, value=(1, max_octaves), step=1, help=f"Interval of octaves you want to compose your volume. Default = (0, {max_octaves})"
-                , key=label)
+                , key=f"{label}_octaves")
                 octaves_thresholds[label] = octaves_threshold
+                persistence = st.slider(
+                    "Persistence", min_value=0.1, max_value=1.0, value=0.7, step=0.01, help="The scaling factor between two octaves ('weight' of an octave). Default = 0.7",
+                    key=f"{label}_persistence")
+                persistence_dict[label] =  np.float64(persistence)
+                
+                
 
                 if gradient_matrix_thresholds:
                     min_values_threshold = st.slider(
@@ -260,7 +264,7 @@ def advanced_page():
                         shape=[volume_size, volume_size, volume_size],
                         octave_thresholds=octaves_thresholds,
                         lacunarity=lacunarity,
-                        persistence=persistence,
+                        persistence=persistence_dict,
                         threads=threads,
                         seed=seed,
                         min_values= min_values_thresholds,
@@ -274,7 +278,7 @@ def advanced_page():
                         shape=[volume_size, volume_size, volume_size],
                         octave_thresholds=octaves_thresholds,
                         lacunarity=lacunarity,
-                        persistence=persistence,
+                        persistence=persistence_dict,
                         threads=threads,
                         seed=seed,
                     )
@@ -399,10 +403,6 @@ def advanced_page():
                         label_mask *= st.session_state.noise_tissues[label]
 
                         result_volume += np.uint8(label_mask[:template_mask.shape[0], :template_mask.shape[1], :template_mask.shape[2]])
-                    
-                    result_volume = np.where(result_volume >= threshold_values[0], result_volume, 0)
-                    result_volume = np.where(result_volume <= threshold_values[1], result_volume, 0)
-                    result_volume = np.where(result_volume > 0, 255, 0)
                     
                     st.session_state.result_volume = result_volume
 
